@@ -1,26 +1,29 @@
 <template>
   <div class="detail top-page" ref="detailRef">
     <tab-control
-      v-if="showTabControl"
-      class="tabs"
-      :titles="names"
-      @tabItemClick="tabClick"
+        v-if="showTabControl"
+        class="tabs"
+        :titles="names"
+        @tabItemClick="tabClick"
+        ref="tabControlRef"
     />
     <van-nav-bar
-      title="房屋详情"
-      left-text="旅途"
-      left-arrow
-      @click-left="onClickLeft"
+        title="房屋详情"
+        left-text="旅途"
+        left-arrow
+        @click-left="onClickLeft"
     />
     <div class="main" v-if="mainPart" v-memo="[mainPart]">
       <detail-swipe :swipe-data="mainPart.topModule.housePicture.housePics"/>
       <detail-infos name="描述" :ref="getSectionRef" :top-infos="mainPart.topModule"/>
-      <detail-facility name="设施" :ref="getSectionRef" :house-facility="mainPart.dynamicModule.facilityModule.houseFacility"/>
+      <detail-facility name="设施" :ref="getSectionRef"
+                       :house-facility="mainPart.dynamicModule.facilityModule.houseFacility"/>
       <detail-landlord name="房东" :ref="getSectionRef" :landlord="mainPart.dynamicModule.landlordModule"/>
       <detail-comment name="评论" :ref="getSectionRef" :comment="mainPart.dynamicModule.commentModule"/>
       <detail-notice name="须知" :ref="getSectionRef" :order-rules="mainPart.dynamicModule.rulesModule.orderRules"/>
-      <detail-map name="周边" :ref="getSectionRef" :position="mainPart.dynamicModule.positionModule"/>
+      <!--      <detail-map name="周边" :ref="getSectionRef" :position="mainPart.dynamicModule.positionModule"/>-->
       <detail-intro :price-intro="mainPart.introductionModule"/>
+      <DetailBuy/>
     </div>
     <div class="footer">
       <img src="@/assets/img/detail/icon_ensure.png" alt="">
@@ -31,9 +34,9 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { getDetailInfos } from "@/services"
+import {ref, computed, watch} from 'vue'
+import {useRoute, useRouter} from 'vue-router'
+import {getDetailInfos} from "@/services"
 
 import TabControl from "@/components/tab-control/tab-control.vue"
 import DetailSwipe from "./cpns/detail_01-swipe.vue"
@@ -45,6 +48,8 @@ import DetailNotice from "./cpns/detail_06-notice.vue"
 import DetailMap from "./cpns/detail_07-map.vue"
 import DetailIntro from "./cpns/detail_08-intro.vue"
 import useScroll from '@/hooks/useScroll'
+import DetailBuy from "@/views/detail/cpns/detail_09-buy.vue";
+
 
 const router = useRouter()
 const route = useRoute()
@@ -64,7 +69,7 @@ const onClickLeft = () => {
 
 // tabControl相关的操作
 const detailRef = ref()
-const { scrollTop } = useScroll(detailRef)
+const {scrollTop} = useScroll(detailRef)
 const showTabControl = computed(() => {
   return scrollTop.value >= 300
 })
@@ -74,27 +79,65 @@ const showTabControl = computed(() => {
 // const getSectionRef = (value) => {
 //   sectionEls.push(value.$el)
 // }
+
 const sectionEls = ref({})
 const names = computed(() => {
   return Object.keys(sectionEls.value)
 })
 const getSectionRef = (value) => {
+  if (!value) return
   const name = value.$el.getAttribute("name")
   sectionEls.value[name] = value.$el
 }
+
+let tabClickFlag = false
+let currentDistance = -1
 const tabClick = (index) => {
   const key = Object.keys(sectionEls.value)[index]
   const el = sectionEls.value[key]
-  let instance = el.offsetTop
+  let distance = el.offsetTop
   if (index !== 0) {
-    instance = instance - 44
+    distance = distance - 44
   }
 
+  tabClickFlag = true
+  currentDistance = distance
+
+
   detailRef.value.scrollTo({
-    top: instance,
+    top: distance,
     behavior: "smooth"
   })
 }
+
+//滚动时，匹配对应的tabControl
+const tabControlRef = ref()
+
+
+watch(scrollTop, (newValue) => {
+  if (newValue === currentDistance) {
+    tabClickFlag = false
+  }
+  if (tabClickFlag) {
+    //点击触发时，不要走滚动的逻辑
+    return
+  }
+
+  // 1.获取每个部分的offsetTops
+  // 如果添加了上面的点击不走滚动的逻辑，该部分不能放到外面。
+  const els = Object.values(sectionEls.value)
+  const values = els.map(el => el.offsetTop)
+
+  // 2. 根据newValue去匹配索引
+  let index = values.length - 1
+  for (let i = 0; i < values.length; i++) {
+    if (values[i] > newValue + 45) {
+      index = i - 1
+      break
+    }
+  }
+  tabControlRef.value?.setCurrentIndex(index)
+})
 
 </script>
 

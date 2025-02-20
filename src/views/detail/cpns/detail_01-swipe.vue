@@ -7,18 +7,21 @@
         </van-swipe-item>
       </template>
 
+      <!--具名插槽#indicator="{ active, total }"-->
       <template #indicator="{ active, total }">
         <!-- <div class="indicator">{{ active }}/{{ swipeData.length }}-{{ total }}</div> -->
         <div class="indicator">
           <template v-for="(value, key, index) in swipeGroup" :key="key">
-            <span 
-              class="item" 
-              :class="{ active: swipeData[active]?.enumPictureCategory === key }"
+            <!-- ==不判断类型 -->
+            <span
+                class="item"
+                :class="{ active: swipeData[active]?.enumPictureCategory == key }"
             >
               <span class="text">{{ getName(value[0].title) }}</span>
-              <span class="count" v-if="swipeData[active]?.enumPictureCategory === key">
+              <span class="count" v-if="swipeData[active]?.enumPictureCategory == key">
                 {{ getCategoryIndex(swipeData[active]) }}/{{ value.length }}
               </span>
+
             </span>
           </template>
         </div>
